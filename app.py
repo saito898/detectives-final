@@ -202,7 +202,7 @@ def render_unit(category, cases, room):
                 else: st.warning("VERACIDAD NO DETERMINADA · LED BLANCO")
                 try:
                     enviado, respuesta_mqtt = publish_wokwi(status, room)
-                    if enviado:
+                if enviado:
                     st.success("SEÑAL ENVIADA A LA UNIDAD DE ANÁLISIS.")
                 else:
                     st.warning(f"No se pudo enviar la señal a Wokwi: {respuesta_mqtt}")

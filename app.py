@@ -190,7 +190,6 @@ with st.sidebar:
     room = st.text_input("ID de sala MQTT", value=st.session_state.get("mqtt_room", "detective-demo"), key="mqtt_room_input")
     st.session_state["mqtt_room"] = re.sub(r"[^a-zA-Z0-9_-]", "", room)[:48] or "detective-demo"
     st.caption(f"Broker: {os.getenv('MQTT_BROKER','broker.hivemq.com')}:{os.getenv('MQTT_PORT','1883')}")
-    st.code(f"archivo09/{st.session_state['mqtt_room']}/truth", language="text")
     st.caption("🟢 Verdad · 🔴 Mentira · ⚪ No determinado")
 
 if category_choice == "Centro de investigación":

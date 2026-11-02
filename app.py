@@ -5,9 +5,13 @@ import uuid
 import html
 import streamlit as st
 import paho.mqtt.client as mqtt
+import time
 from openai import OpenAI
 from casos_asesinatos import CASOS_ASESINATOS
 from casos_secuestros import CASOS_SECUESTROS
+
+BROKER = "broker.hivemq.com"
+PORT = 1883
 
 st.set_page_config(page_title="ARCHIVO 09 | Unidad de Casos Especiales", page_icon="🕵️", layout="wide", initial_sidebar_state="expanded")
 
@@ -47,22 +51,69 @@ def get_client(api_key):
         raise ValueError("Escribe tu clave API de OpenAI para iniciar el interrogatorio.")
     return OpenAI(api_key=api_key.strip())
 
+def enviar_mqtt(topic, payload):
+    """Publica la clasificación de la IA en el broker MQTT."""
+
+    cliente = None
+
+    try:
+        # Identificador único para Streamlit
+        client_id = "Salitostreamlit_" + str(int(time.time() * 1000))
+
+        # Compatible con diferentes versiones de Paho MQTT
+        try:
+            cliente = mqtt.Client(
+                callback_api_version=mqtt.CallbackAPIVersion.VERSION1,
+                client_id=client_id
+            )
+        except (AttributeError, TypeError):
+            cliente = mqtt.Client(client_id=client_id)
+
+        cliente.connect(BROKER, PORT, keepalive=30)
+        cliente.loop_start()
+
+        mensaje = json.dumps(payload, ensure_ascii=False)
+
+        resultado = cliente.publish(topic, mensaje, qos=0)
+
+        resultado.wait_for_publish(timeout=10)
+
+        if resultado.is_published():
+            st.session_state.ultimo_mensaje = (
+                f"Señal enviada correctamente: {payload['status']}"
+            )
+            return True, mensaje
+
+        return False, "No se pudo confirmar la publicación MQTT."
+
+    except Exception as error:
+        return False, str(error)
+
+    finally:
+        if cliente is not None:
+            try:
+                cliente.loop_stop()
+                cliente.disconnect()
+            except Exception:
+                pass
+
+
 def publish_wokwi(status, room):
+    """Envía a Wokwi el resultado de veracidad generado por la IA."""
+
     room = re.sub(r"[^a-zA-Z0-9_-]", "", str(room))[:48]
+
     if not room:
-        raise ValueError("El ID de sala MQTT no puede estar vacío.")
-    broker = os.getenv("MQTT_BROKER", "broker.hivemq.com")
-    port = int(os.getenv("MQTT_PORT", "1883"))
+        return False, "El ID de sala MQTT está vacío."
+
     topic = f"archivo09/{room}/truth"
-    payload = json.dumps({"status": status, "room": room})
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="archivo09-" + uuid.uuid4().hex[:10])
-    client.connect(broker, port, keepalive=20)
-    client.loop_start()
-    info = client.publish(topic, payload, qos=0, retain=False)
-    info.wait_for_publish(timeout=3)
-    client.loop_stop()
-    client.disconnect()
-    return topic
+
+    payload = {
+        "status": status,
+        "room": room
+    }
+
+    return enviar_mqtt(topic, payload)
 
 def transcribe_audio(client, audio_file):
     if audio_file is None:
@@ -150,10 +201,14 @@ def render_unit(category, cases, room):
                 elif status == "false": st.error("POSIBLE MENTIRA · LED ROJO")
                 else: st.warning("VERACIDAD NO DETERMINADA · LED BLANCO")
                 try:
-                    topic = publish_wokwi(status, room)
-                    st.caption(f"Señal MQTT enviada al tema: {topic}")
-                except Exception as exc:
-                    st.warning(f"No se pudo enviar la señal a Wokwi: {exc}. Verifica internet y que el ESP32 esté activo con el mismo ID de sala.")
+                    enviado, respuesta_mqtt = publish_wokwi(status, room)
+                    if enviado:
+                    st.success("SEÑAL ENVIADA A LA UNIDAD DE ANÁLISIS.")
+                else:
+                    st.warning(f"No se pudo enviar la señal a Wokwi: {respuesta_mqtt}")
+
+except Exception as exc:
+    st.warning(f"Error de conexión MQTT: {exc}")
                 history_key = f"history_{category}_{case['id']}"
                 st.session_state.setdefault(history_key, []).append({"suspect":selected,"question":question,"answer":result["answer"],"status":status})
         except Exception as exc:

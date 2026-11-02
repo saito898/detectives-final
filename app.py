@@ -239,7 +239,7 @@ def enviar_mqtt(topic, payload):
     cliente = None
 
     try:
-        client_id = "Salitostreamlit_" + str(
+        client_id = "Salitodetective" + str(
             int(time.time() * 1000)
         )
 

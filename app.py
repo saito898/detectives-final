@@ -1,9 +1,10 @@
+
 import os
 import json
 import re
-import uuid
-import html
 import time
+import html
+
 import streamlit as st
 import paho.mqtt.client as mqtt
 
@@ -13,11 +14,11 @@ from casos_secuestros import CASOS_SECUESTROS
 
 
 # =========================================================
-# CONFIGURACIÓN GENERAL
+# CONFIGURACIÓN
 # =========================================================
 
 st.set_page_config(
-    page_title="ARCHIVO 09 | Unidad de Investigación",
+    page_title="ARCHIVO 09 | Investigación Criminal",
     page_icon="🕵️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -35,23 +36,26 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Special+Elite&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'IBM Plex Mono', monospace;
-}
-
 .stApp {
     background-color: #101713;
     color: #e8e0cd;
+    font-family: 'IBM Plex Mono', monospace;
 }
+
+/* TEXTOS GENERALES */
+
+p, label, span {
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* TITULOS */
 
 h1, h2, h3 {
     font-family: 'Special Elite', cursive !important;
-    color: #e8e0cd;
+    color: #e8e0cd !important;
 }
 
-p, label, span, div {
-    color: #e8e0cd;
-}
+/* BARRA LATERAL */
 
 [data-testid="stSidebar"] {
     background-color: #19231d;
@@ -62,9 +66,20 @@ p, label, span, div {
     color: #e8e0cd;
 }
 
+[data-testid="stSidebarNav"] {
+    padding-top: 15px;
+}
+
+[data-testid="stSidebarNav"] span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+}
+
+/* ENCABEZADO PRINCIPAL */
+
 .hero {
-    background: #e5dcc5;
-    color: #1b241e;
+    background-color: #e5dcc5 !important;
+    color: #1b241e !important;
     padding: 30px;
     border-left: 7px solid #9b3434;
     margin-bottom: 25px;
@@ -72,14 +87,27 @@ p, label, span, div {
 
 .hero h1 {
     color: #1b241e !important;
-    font-size: 42px;
-    margin-bottom: 5px;
+    -webkit-text-fill-color: #1b241e !important;
+    font-family: 'Special Elite', cursive !important;
+    font-size: 46px !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
 }
 
 .hero p {
-    color: #394238;
-    margin-bottom: 0;
+    color: #394238 !important;
+    -webkit-text-fill-color: #394238 !important;
+    font-family: 'IBM Plex Mono', monospace;
 }
+
+.status-label {
+    color: #9b3434 !important;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 700;
+}
+
+/* TITULOS DE SECCIÓN */
 
 .section-title {
     font-family: 'Special Elite', cursive;
@@ -90,6 +118,8 @@ p, label, span, div {
     margin-top: 25px;
     margin-bottom: 15px;
 }
+
+/* TARJETAS DE CASOS */
 
 .case-card {
     background: #e5dcc5;
@@ -109,6 +139,8 @@ p, label, span, div {
     color: #394238 !important;
     font-size: 13px;
 }
+
+/* TARJETAS DE SOSPECHOSOS */
 
 .suspect-card {
     background: #202c24;
@@ -133,6 +165,8 @@ p, label, span, div {
     color: #c6bea9;
 }
 
+/* TARJETAS DE EVIDENCIA */
+
 .evidence-card {
     background: #e5dcc5;
     color: #1b241e;
@@ -144,6 +178,8 @@ p, label, span, div {
 .evidence-card p {
     color: #30392f !important;
 }
+
+/* BOTONES */
 
 .stButton > button {
     background-color: #9b3434;
@@ -161,7 +197,10 @@ p, label, span, div {
     border: none;
 }
 
-.stTextInput input, .stTextArea textarea {
+/* CAMPOS */
+
+.stTextInput input,
+.stTextArea textarea {
     background-color: #202c24;
     color: #e8e0cd;
     border: 1px solid #59634e;
@@ -171,6 +210,8 @@ p, label, span, div {
     background-color: #202c24;
 }
 
+/* PROGRESO */
+
 .stProgress > div > div {
     background-color: #9b3434;
 }
@@ -178,30 +219,29 @@ p, label, span, div {
 hr {
     border-color: #59634e;
 }
-
-.status-label {
-    color: #c9b47c;
-    font-size: 12px;
-    letter-spacing: 2px;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 
 # =========================================================
-# FUNCIONES GENERALES
+# CONFIGURACIÓN DE API
 # =========================================================
 
 def get_client(api_key):
     return OpenAI(api_key=api_key)
 
 
+# =========================================================
+# MQTT
+# =========================================================
+
 def enviar_mqtt(topic, payload):
     cliente = None
 
     try:
-        client_id = "Salitostreamlit_" + str(int(time.time() * 1000))
+        client_id = "Salitostreamlit_" + str(
+            int(time.time() * 1000)
+        )
 
         try:
             cliente = mqtt.Client(
@@ -214,15 +254,20 @@ def enviar_mqtt(topic, payload):
         cliente.connect(BROKER, PORT, keepalive=30)
         cliente.loop_start()
 
-        mensaje = json.dumps(payload, ensure_ascii=False)
+        mensaje = json.dumps(
+            payload,
+            ensure_ascii=False
+        )
 
-        resultado = cliente.publish(topic, mensaje, qos=0)
+        resultado = cliente.publish(
+            topic,
+            mensaje,
+            qos=0
+        )
+
         resultado.wait_for_publish(timeout=10)
 
         if resultado.is_published():
-            st.session_state.ultimo_mensaje = (
-                f"Tema: {topic} | Mensaje: {mensaje}"
-            )
             return True, mensaje
 
         return False, "No se pudo confirmar la publicación MQTT."
@@ -240,7 +285,11 @@ def enviar_mqtt(topic, payload):
 
 
 def publish_wokwi(status, room):
-    room = re.sub(r"[^a-zA-Z0-9_-]", "", room.strip())
+    room = re.sub(
+        r"[^a-zA-Z0-9_-]",
+        "",
+        room.strip()
+    )
 
     if not room:
         room = "detective-demo"
@@ -255,6 +304,10 @@ def publish_wokwi(status, room):
     return enviar_mqtt(topic, payload)
 
 
+# =========================================================
+# AUDIO
+# =========================================================
+
 def transcribe_audio(client, audio_file):
     try:
         transcription = client.audio.transcriptions.create(
@@ -265,15 +318,23 @@ def transcribe_audio(client, audio_file):
         return transcription.text
 
     except Exception as error:
-        st.error(f"No fue posible transcribir el audio: {error}")
+        st.error(
+            f"No fue posible transcribir el audio: {error}"
+        )
         return None
 
 
 # =========================================================
-# INTERROGATORIO CON IA
+# INTERROGATORIO CON INTELIGENCIA ARTIFICIAL
 # =========================================================
 
-def interrogate(client, case, suspect_name, question, history=None):
+def interrogate(
+    client,
+    case,
+    suspect_name,
+    question,
+    history=None
+):
 
     suspect = next(
         (
@@ -289,50 +350,59 @@ def interrogate(client, case, suspect_name, question, history=None):
     history = history or []
 
     system_prompt = f"""
-Eres un personaje dentro de un juego de investigación criminal llamado ARCHIVO 09.
+Eres un personaje dentro de un juego de investigación criminal
+llamado ARCHIVO 09.
 
 Debes interpretar exclusivamente al sospechoso seleccionado.
 
 INFORMACIÓN DEL CASO:
+
 Título: {case["title"]}
 Descripción: {case["description"]}
 Víctima: {case["victim"]}
 Ubicación: {case["location"]}
 Elemento principal: {case["weapon"]}
 
-SOSPECHOSO QUE DEBES INTERPRETAR:
+SOSPECHOSO:
+
 Nombre: {suspect["name"]}
 Rol: {suspect["role"]}
 Declaración inicial: {suspect["public_statement"]}
 
 REGISTRO DE VERDAD DEL CASO:
+
 {json.dumps(case["truth_ledger"], ensure_ascii=False, indent=2)}
 
-INSTRUCCIONES DE INTERPRETACIÓN:
+INSTRUCCIONES:
 
-- Responde siempre en primera persona, como el sospechoso.
+- Responde siempre en primera persona.
 - Mantén una personalidad coherente.
 - No reveles automáticamente que eres culpable.
 - No inventes hechos que contradigan el registro de verdad.
-- Puedes mentir, ocultar información o responder evasivamente si eso corresponde al personaje.
+- Puedes mentir, ocultar información o responder evasivamente
+  si corresponde al personaje.
 - Mantén continuidad con las respuestas anteriores.
 - Responde específicamente a lo que pregunta el detective.
 - No menciones que eres una inteligencia artificial.
-- No reveles el registro de verdad ni expliques cómo funciona la clasificación.
+- No reveles el registro de verdad.
 
 CLASIFICACIÓN:
 
-Debes determinar si la respuesta que acabas de dar contiene información verdadera o falsa según el registro de verdad.
+Debes determinar si la respuesta contiene información
+verdadera o falsa según el registro de verdad.
 
-Usa exclusivamente estos valores:
-- true: la respuesta contiene información verdadera.
-- false: la respuesta contiene información falsa o una mentira.
-- unknown: no hay información suficiente para determinarlo.
+Utiliza exclusivamente:
 
-Si la respuesta mezcla información verdadera y falsa, clasifica según la afirmación principal de la respuesta.
+true: respuesta verdadera.
+false: respuesta falsa o mentira.
+unknown: no existe información suficiente para determinarlo.
+
+Si mezcla información verdadera y falsa, clasifica según
+la afirmación principal.
 
 FORMATO OBLIGATORIO:
-Devuelve exclusivamente un JSON válido con esta estructura:
+
+Devuelve exclusivamente un JSON válido:
 
 {{
     "answer": "Respuesta del sospechoso en primera persona",
@@ -376,9 +446,16 @@ Devuelve exclusivamente un JSON válido con esta estructura:
         )
 
         answer = result.get("answer", "")
-        truth_status = result.get("truth_status", "unknown")
+        truth_status = result.get(
+            "truth_status",
+            "unknown"
+        )
 
-        if truth_status not in ["true", "false", "unknown"]:
+        if truth_status not in [
+            "true",
+            "false",
+            "unknown"
+        ]:
             truth_status = "unknown"
 
         return {
@@ -387,15 +464,18 @@ Devuelve exclusivamente un JSON válido con esta estructura:
         }
 
     except Exception as error:
-        st.error(f"Error durante el interrogatorio: {error}")
+        st.error(
+            f"Error durante el interrogatorio: {error}"
+        )
         return None
 
 
 # =========================================================
-# FUNCIONES DE PRESENTACIÓN
+# PRESENTACIÓN DE EXPEDIENTES
 # =========================================================
 
 def render_case(case):
+
     st.markdown(
         f"""
         <div class="hero">
@@ -446,9 +526,10 @@ def render_case(case):
         unsafe_allow_html=True
     )
 
-    clues = case.get("clues", [])
-
-    for index, clue in enumerate(clues, start=1):
+    for index, clue in enumerate(
+        case.get("clues", []),
+        start=1
+    ):
         st.markdown(
             f"""
             <div class="evidence-card">
@@ -461,7 +542,7 @@ def render_case(case):
 
 
 # =========================================================
-# SELECCIÓN DE CASOS MEDIANTE TARJETAS
+# TARJETAS DE CASOS
 # =========================================================
 
 def render_case_cards(category, cases):
@@ -474,6 +555,7 @@ def render_case_cards(category, cases):
     selected_id = st.session_state[state_key]
 
     if selected_id is not None:
+
         selected_case = next(
             (
                 case for case in cases
@@ -483,6 +565,7 @@ def render_case_cards(category, cases):
         )
 
         if selected_case:
+
             if st.button("← VOLVER AL ARCHIVO DE CASOS"):
                 st.session_state[state_key] = None
                 st.rerun()
@@ -499,8 +582,15 @@ def render_case_cards(category, cases):
     difficulties = {}
 
     for case in cases:
-        difficulty = case.get("difficulty", "Sin clasificar")
-        difficulties.setdefault(difficulty, []).append(case)
+        difficulty = case.get(
+            "difficulty",
+            "Sin clasificar"
+        )
+
+        difficulties.setdefault(
+            difficulty,
+            []
+        ).append(case)
 
     for difficulty, difficulty_cases in difficulties.items():
 
@@ -512,6 +602,7 @@ def render_case_cards(category, cases):
         columns = st.columns(2)
 
         for index, case in enumerate(difficulty_cases):
+
             with columns[index % 2]:
 
                 st.markdown(
@@ -536,12 +627,14 @@ def render_case_cards(category, cases):
 
 
 # =========================================================
-# SELECCIÓN DE SOSPECHOSOS MEDIANTE TARJETAS
+# TARJETAS DE SOSPECHOSOS
 # =========================================================
 
 def render_suspect_cards(category, case):
 
-    state_key = f"selected_suspect_{category}_{case['id']}"
+    state_key = (
+        f"selected_suspect_{category}_{case['id']}"
+    )
 
     if state_key not in st.session_state:
         st.session_state[state_key] = None
@@ -597,12 +690,15 @@ def render_suspect_cards(category, case):
 
 
 # =========================================================
-# UNIDAD DE INVESTIGACIÓN
+# PÁGINA DE CADA UNIDAD
 # =========================================================
 
 def render_unit(category, cases, room):
 
-    selected_case = render_case_cards(category, cases)
+    selected_case = render_case_cards(
+        category,
+        cases
+    )
 
     if selected_case is None:
         return
@@ -617,7 +713,9 @@ def render_unit(category, cases, room):
     )
 
     if not selected_suspect:
-        st.info("Selecciona un sospechoso para comenzar el interrogatorio.")
+        st.info(
+            "Selecciona un sospechoso para comenzar el interrogatorio."
+        )
         return
 
     st.divider()
@@ -638,7 +736,9 @@ def render_unit(category, cases, room):
     )
 
     if not api_key:
-        st.warning("Ingresa tu clave API para iniciar el interrogatorio.")
+        st.warning(
+            "Ingresa tu clave API para iniciar el interrogatorio."
+        )
         return
 
     client = get_client(api_key)
@@ -673,13 +773,19 @@ def render_unit(category, cases, room):
     question = typed_question.strip()
 
     if audio_file is not None:
+
         if st.button(
             "TRANSCRIBIR AUDIO",
             key=f"transcribe_{category}_{selected_case['id']}_{selected_suspect}"
         ):
-            transcription = transcribe_audio(client, audio_file)
+
+            transcription = transcribe_audio(
+                client,
+                audio_file
+            )
 
             if transcription:
+
                 st.session_state[
                     f"transcription_{category}_{selected_case['id']}_{selected_suspect}"
                 ] = transcription
@@ -691,6 +797,7 @@ def render_unit(category, cases, room):
     )
 
     if transcription_key in st.session_state:
+
         question = st.session_state[transcription_key]
 
         st.markdown("**PREGUNTA TRANSCRITA:**")
@@ -702,10 +809,15 @@ def render_unit(category, cases, room):
     ):
 
         if not question:
-            st.warning("Primero debes escribir o grabar una pregunta.")
+            st.warning(
+                "Primero debes escribir o grabar una pregunta."
+            )
 
         else:
-            with st.spinner("El sospechoso está respondiendo..."):
+
+            with st.spinner(
+                "El sospechoso está respondiendo..."
+            ):
 
                 result = interrogate(
                     client,
@@ -764,10 +876,12 @@ def render_unit(category, cases, room):
                 )
 
                 if mqtt_success:
-                    st.success("SEÑAL ENVIADA A LA UNIDAD DE ANÁLISIS.")
+                    st.success(
+                        "SEÑAL ENVIADA A LA UNIDAD DE ANÁLISIS."
+                    )
                 else:
                     st.warning(
-                        f"No fue posible enviar la señal al dispositivo: {mqtt_message}"
+                        f"No fue posible enviar la señal: {mqtt_message}"
                     )
 
                 st.session_state[history_key].append({
@@ -782,9 +896,7 @@ def render_unit(category, cases, room):
 
                 st.rerun()
 
-    # =====================================================
-    # HISTORIAL DEL SOSPECHOSO
-    # =====================================================
+    # HISTORIAL
 
     st.markdown(
         '<div class="section-title">HISTORIAL DEL INTERROGATORIO</div>',
@@ -797,28 +909,35 @@ def render_unit(category, cases, room):
     ]
 
     if not suspect_history:
-        st.info("Todavía no hay preguntas registradas para este sospechoso.")
+
+        st.info(
+            "Todavía no hay preguntas registradas para este sospechoso."
+        )
 
     else:
-        for index, item in enumerate(suspect_history, start=1):
 
-            with st.expander(f"INTERROGATORIO {index:02d}"):
+        for index, item in enumerate(
+            suspect_history,
+            start=1
+        ):
+
+            with st.expander(
+                f"INTERROGATORIO {index:02d}"
+            ):
 
                 st.markdown("**DETECTIVE:**")
                 st.write(item["question"])
 
-                st.markdown(f"**{selected_suspect.upper()}:**")
+                st.markdown(
+                    f"**{selected_suspect.upper()}:**"
+                )
                 st.write(item["answer"])
 
-                status = item["truth_status"]
-
                 st.caption(
-                    f"CLASIFICACIÓN: {status.upper()}"
+                    f"CLASIFICACIÓN: {item['truth_status'].upper()}"
                 )
 
-    # =====================================================
     # ACUSACIÓN FINAL
-    # =====================================================
 
     st.divider()
 
@@ -844,44 +963,58 @@ def render_unit(category, cases, room):
     ):
 
         if accusation == "Selecciona un sospechoso":
-            st.warning("Debes seleccionar a alguien antes de acusar.")
+
+            st.warning(
+                "Debes seleccionar a alguien antes de acusar."
+            )
 
         else:
+
             culprit = selected_case["culprit"]
 
             if accusation == culprit:
-                st.success("¡CASO RESUELTO! HAS IDENTIFICADO AL RESPONSABLE.")
+
+                st.success(
+                    "¡CASO RESUELTO! HAS IDENTIFICADO AL RESPONSABLE."
+                )
+
             else:
-                st.error("ACUSACIÓN INCORRECTA. EL CASO SIGUE SIN RESOLVERSE.")
 
-    # =====================================================
-    # PROGRESO
-    # =====================================================
-
-    total_questions = len(suspect_history)
+                st.error(
+                    "ACUSACIÓN INCORRECTA. EL CASO SIGUE SIN RESOLVERSE."
+                )
 
     st.divider()
 
     st.markdown(
-        f"**PREGUNTAS REALIZADAS A ESTE SOSPECHOSO:** {total_questions}"
+        f"**PREGUNTAS REALIZADAS A ESTE SOSPECHOSO:** {len(suspect_history)}"
     )
 
 
 # =========================================================
-# BARRA LATERAL
+# CONFIGURACIÓN DE LA BARRA LATERAL
 # =========================================================
 
 with st.sidebar:
 
-    st.markdown(
-        """
-        <h1 style="font-family:Special Elite;">
+    st.markdown("""
+    <div style="text-align:center; padding:15px 0;">
+        <h1 style="
+            font-family:'Special Elite',cursive;
+            color:#e5dcc5 !important;
+            font-size:30px;
+        ">
             ARCHIVO 09
         </h1>
-        <p class="status-label">SISTEMA DE INVESTIGACIÓN</p>
-        """,
-        unsafe_allow_html=True
-    )
+        <p style="
+            color:#c9b47c;
+            font-size:10px;
+            letter-spacing:2px;
+        ">
+            SISTEMA DE INVESTIGACIÓN
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.divider()
 
@@ -889,7 +1022,8 @@ with st.sidebar:
 
     room = st.text_input(
         "Identificador de la unidad",
-        value="detective-demo"
+        value="detective-demo",
+        key="mqtt_room"
     )
 
     st.caption(f"Broker MQTT: {BROKER}")
@@ -910,35 +1044,91 @@ with st.sidebar:
 
 
 # =========================================================
-# PANTALLA PRINCIPAL
+# PÁGINAS DE NAVEGACIÓN
 # =========================================================
 
-st.markdown(
-    """
+def pagina_inicio():
+
+    st.markdown("""
     <div class="hero">
-        <p class="status-label">DEPARTAMENTO DE INVESTIGACIÓN CRIMINAL</p>
+        <p class="status-label">
+            DEPARTAMENTO DE INVESTIGACIÓN CRIMINAL
+        </p>
         <h1>ARCHIVO 09</h1>
         <p>
             Sistema de análisis, interrogatorio y resolución de casos.
             Selecciona una unidad para comenzar tu investigación.
         </p>
     </div>
-    """,
-    unsafe_allow_html=True
-)
-
-unit = st.radio(
-    "SELECCIONA UNA UNIDAD DE INVESTIGACIÓN",
-    ["Asesinatos", "Secuestros"],
-    horizontal=True
-)
-
-if unit == "Asesinatos":
+    """, unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="section-title">UNIDAD DE HOMICIDIOS</div>',
+        '<div class="section-title">UNIDADES DE INVESTIGACIÓN</div>',
         unsafe_allow_html=True
     )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.markdown("""
+        <div class="case-card">
+            <p>UNIDAD 01</p>
+            <h3>HOMICIDIOS</h3>
+            <p>
+                Investiga escenas del crimen, analiza evidencias,
+                interroga sospechosos y descubre al responsable.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+
+        st.markdown("""
+        <div class="case-card">
+            <p>UNIDAD 02</p>
+            <h3>SECUESTROS</h3>
+            <p>
+                Analiza desapariciones, reconstruye acontecimientos
+                e identifica a los responsables.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="section-title">PROTOCOLO DE INVESTIGACIÓN</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown("""
+    <div class="evidence-card">
+        <strong>01. ABRIR EXPEDIENTE</strong>
+        <p>Selecciona un caso y revisa la información disponible.</p>
+    </div>
+    <div class="evidence-card">
+        <strong>02. ANALIZAR SOSPECHOSOS</strong>
+        <p>Estudia sus perfiles y declaraciones iniciales.</p>
+    </div>
+    <div class="evidence-card">
+        <strong>03. INTERROGAR</strong>
+        <p>Formula preguntas por texto o audio y analiza sus respuestas.</p>
+    </div>
+    <div class="evidence-card">
+        <strong>04. RESOLVER EL CASO</strong>
+        <p>Utiliza las evidencias para formular tu acusación final.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def pagina_asesinatos():
+
+    st.markdown("""
+    <div class="hero">
+        <p class="status-label">UNIDAD 01 · INVESTIGACIÓN CRIMINAL</p>
+        <h1>HOMICIDIOS</h1>
+        <p>Archivo de investigaciones sobre muertes sospechosas.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     render_unit(
         "asesinatos",
@@ -946,15 +1136,52 @@ if unit == "Asesinatos":
         room
     )
 
-else:
 
-    st.markdown(
-        '<div class="section-title">UNIDAD DE SECUESTROS</div>',
-        unsafe_allow_html=True
-    )
+def pagina_secuestros():
+
+    st.markdown("""
+    <div class="hero">
+        <p class="status-label">UNIDAD 02 · INVESTIGACIÓN CRIMINAL</p>
+        <h1>SECUESTROS</h1>
+        <p>Archivo de investigaciones sobre desapariciones y secuestros.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     render_unit(
         "secuestros",
         CASOS_SECUESTROS,
         room
     )
+
+
+# =========================================================
+# NAVEGACIÓN LATERAL ENTRE PÁGINAS
+# =========================================================
+
+paginas = {
+    "ARCHIVO 09": [
+        st.Page(
+            pagina_inicio,
+            title="Inicio",
+            icon="🏠",
+            default=True
+        ),
+        st.Page(
+            pagina_asesinatos,
+            title="Asesinatos",
+            icon="🔎"
+        ),
+        st.Page(
+            pagina_secuestros,
+            title="Secuestros",
+            icon="📁"
+        )
+    ]
+}
+
+navegacion = st.navigation(
+    paginas,
+    position="sidebar"
+)
+
+navegacion.run()

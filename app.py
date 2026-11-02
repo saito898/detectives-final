@@ -201,14 +201,14 @@ def render_unit(category, cases, room):
                 elif status == "false": st.error("POSIBLE MENTIRA · LED ROJO")
                 else: st.warning("VERACIDAD NO DETERMINADA · LED BLANCO")
                 try:
-                        enviado, respuesta_mqtt = publish_wokwi(status, room)
+                    enviado, respuesta_mqtt = publish_wokwi(status, room)
                     if enviado:
                         st.success("SEÑAL ENVIADA A LA UNIDAD DE ANÁLISIS.")
                     else:
                         st.warning(f"No se pudo enviar la señal a Wokwi: {respuesta_mqtt}")
 
                 except Exception as exc:
-                st.warning(f"Error de conexión MQTT: {exc}")
+                    st.warning(f"Error de conexión MQTT: {exc}")
                 history_key = f"history_{category}_{case['id']}"
                 st.session_state.setdefault(history_key, []).append({"suspect":selected,"question":question,"answer":result["answer"],"status":status})
         except Exception as exc:
